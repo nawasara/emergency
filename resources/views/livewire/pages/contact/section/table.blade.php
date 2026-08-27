@@ -10,12 +10,59 @@
         @endcan
     </x-nawasara-ui::page-header>
 
+    {{-- Toolbar — pola yang sama dengan DNS Records (`nawasara-cloudflare`):
+         saringan di kiri, pencarian mengisi ruang tengah, aksi menempel
+         kanan. filter-panel meneleportasikan chip-nya ke bawah toolbar,
+         jadi chip yang membungkus tidak menggeser barisnya. --}}
+    <div class="space-y-2 mb-4">
+        <div class="flex flex-col md:flex-row md:flex-nowrap md:items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <x-nawasara-ui::filter-panel
+                    label="Filter"
+                    :state="['groupFilter' => $groupFilter, 'statusFilter' => $statusFilter]"
+                    :labels="[
+                        'groupFilter' => $this->groupOptions,
+                        'statusFilter' => ['active' => 'Aktif', 'inactive' => 'Nonaktif'],
+                    ]">
+                    <x-nawasara-ui::filter-group
+                        label="Kelompok"
+                        model="groupFilter"
+                        :items="$this->groupOptions"
+                        icon="lucide-folder" />
+
+                    <x-nawasara-ui::filter-group
+                        label="Status"
+                        model="statusFilter"
+                        :items="['active' => 'Aktif', 'inactive' => 'Nonaktif']"
+                        icon="lucide-toggle-left" />
+                </x-nawasara-ui::filter-panel>
+            </div>
+
+            {{-- prop `model`, bukan wire:model — lihat PHPDoc komponennya --}}
+            <x-nawasara-ui::search-input
+                model="search"
+                placeholder="Cari nama, nomor, atau keterangan..." />
+        </div>
+
+        <div data-filter-chips class="flex flex-wrap items-center gap-2"></div>
+    </div>
+
     <x-nawasara-ui::page.card>
         @if (count($this->rows) === 0)
-            <x-nawasara-ui::empty-state
-                icon="lucide-phone-off"
-                title="Belum ada nomor darurat"
-                description="Jalankan ContactSeeder untuk mengisi nomor nasional, lalu tambahkan nomor lokal Ponorogo." />
+            {{-- Dibedakan: "belum ada data" menuntut tindakan yang berbeda
+                 dari "saringan tidak menghasilkan apa-apa". Satu pesan untuk
+                 keduanya membuat staf mencari data yang sebenarnya ada. --}}
+            @if ($search !== '' || $groupFilter !== '' || $statusFilter !== '')
+                <x-nawasara-ui::empty-state
+                    icon="lucide-search-x"
+                    title="Tidak ada nomor yang cocok"
+                    description="Ubah kata kunci atau saringannya." />
+            @else
+                <x-nawasara-ui::empty-state
+                    icon="lucide-phone-off"
+                    title="Belum ada nomor darurat"
+                    description="Jalankan ContactSeeder untuk mengisi nomor nasional, lalu tambahkan nomor lokal Ponorogo." />
+            @endif
         @else
             <x-nawasara-ui::table :headers="['Kelompok', 'Nama', 'Nomor', 'Utama', 'Status', '']" stickyLast>
                 <x-slot:table>
@@ -46,21 +93,35 @@
                             </x-nawasara-ui::badge>
                         </td>
                         <td class="px-4 py-2.5 text-right">
-                            @can('emergency.contact.manage')
-                                {{-- placement kiri: sel sticky membuat konteks
-                                     penumpukan yang memotong tooltip ke kanan --}}
-                                <x-nawasara-ui::icon-button
-                                    icon="lucide-pencil"
-                                    tooltip="Ubah"
-                                    placement="left"
-                                    wire:click="edit({{ $row->id }})" />
-
-                                <x-nawasara-ui::icon-button
-                                    :icon="$row->is_active ? 'lucide-eye-off' : 'lucide-eye'"
-                                    :tooltip="$row->is_active ? 'Nonaktifkan' : 'Aktifkan'"
-                                    placement="left"
-                                    wire:click="toggle({{ $row->id }})" />
-                            @endcan
+                            {{-- Dropdown titik-tiga, pola yang sama dengan DNS
+                                 Records. Tombol berjejer memakan lebar kolom
+                                 dan tidak menyediakan tempat bagi aksi ketiga
+                                 seperti Hapus. --}}
+                            <x-nawasara-ui::dropdown-menu-action :id="$row->id" :items="[
+                                [
+                                    'type' => 'click',
+                                    'label' => 'Ubah',
+                                    'wire:click' => 'edit('.$row->id.')',
+                                    'modal' => 'kontak-form',
+                                    'icon' => 'lucide-pencil',
+                                    'permission' => 'emergency.contact.manage',
+                                ],
+                                [
+                                    'type' => 'click',
+                                    'label' => $row->is_active ? 'Nonaktifkan' : 'Aktifkan',
+                                    'wire:click' => 'toggle('.$row->id.')',
+                                    'icon' => $row->is_active ? 'lucide-eye-off' : 'lucide-eye',
+                                    'permission' => 'emergency.contact.manage',
+                                ],
+                                [
+                                    'type' => 'click',
+                                    'label' => 'Hapus',
+                                    'wire:click' => 'delete('.$row->id.')',
+                                    'icon' => 'lucide-trash-2',
+                                    'confirm' => 'Hapus nomor "'.$row->name.'" secara permanen? Untuk menonaktifkan sementara, pakai Nonaktifkan.',
+                                    'permission' => 'emergency.contact.manage',
+                                ],
+                            ]" />
                         </td>
                     </tr>
                 @endforeach

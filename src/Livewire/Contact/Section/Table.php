@@ -3,6 +3,7 @@
 namespace Nawasara\Emergency\Livewire\Contact\Section;
 
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Nawasara\Emergency\Models\EmergencyContact;
 
@@ -16,6 +17,19 @@ use Nawasara\Emergency\Models\EmergencyContact;
  */
 class Table extends Component
 {
+    /**
+     * Saringan toolbar — di URL supaya tautan hasil saringan dapat dibagikan
+     * dan tetap bertahan setelah muat ulang.
+     */
+    #[Url(as: 'q', except: '')]
+    public string $search = '';
+
+    #[Url(except: '')]
+    public string $groupFilter = '';
+
+    #[Url(except: '')]
+    public string $statusFilter = '';
+
     public ?int $editingId = null;
 
     public string $group = '';
@@ -30,6 +44,15 @@ class Table extends Component
     public function rows()
     {
         return EmergencyContact::query()
+            ->when($this->search !== '', function ($q) {
+                $term = '%'.$this->search.'%';
+                $q->where(fn ($w) => $w
+                    ->where('name', 'like', $term)
+                    ->orWhere('number', 'like', $term)
+                    ->orWhere('description', 'like', $term));
+            })
+            ->when($this->groupFilter !== '', fn ($q) => $q->where('group', $this->groupFilter))
+            ->when($this->statusFilter !== '', fn ($q) => $q->where('is_active', $this->statusFilter === 'active'))
             ->get()
             // Diurutkan menurut kemendesakan kelompoknya, bukan abjad —
             // "Bencana" mendahului "Darurat" secara alfabet, padahal Darurat
@@ -135,6 +158,35 @@ class Table extends Component
         $contact->update(['is_active' => ! $contact->is_active]);
 
         unset($this->rows);
+    }
+
+    /**
+     * Hapus permanen.
+     *
+     * Berbeda dari [toggle] yang hanya menonaktifkan. Keduanya disediakan
+     * karena keduanya dibutuhkan untuk hal yang berbeda:
+     *
+     *   nonaktifkan  nomor yang sementara tidak berlaku — posko yang tutup,
+     *                puskesmas yang sedang pindah. Jejaknya tetap ada, dan
+     *                dapat dihidupkan lagi.
+     *   hapus        baris yang memang keliru — salah ketik, ganda, atau
+     *                nomor yang tidak pernah benar. Menyimpannya sebagai
+     *                "nonaktif" hanya membuat daftar penuh sampah yang harus
+     *                dibaca ulang setiap kali seseorang menyunting.
+     *
+     * Digerbang `emergency.contact.manage` seperti aksi lain, dan blade
+     * memasang konfirmasi — nomor darurat yang terhapus tanpa sengaja tidak
+     * terlihat sampai ada yang membutuhkannya.
+     */
+    public function delete(int $id): void
+    {
+        $this->authorize('emergency.contact.manage');
+
+        EmergencyContact::findOrFail($id)->delete();
+
+        $this->dispatch('toast', type: 'success', message: 'Nomor dihapus.');
+
+        unset($this->rows, $this->groupOptions);
     }
 
     public function render()

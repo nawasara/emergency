@@ -18,6 +18,7 @@
                 description="Jalankan ContactSeeder untuk mengisi nomor nasional, lalu tambahkan nomor lokal Ponorogo." />
         @else
             <x-nawasara-ui::table :headers="['Kelompok', 'Nama', 'Nomor', 'Utama', 'Status', '']" stickyLast>
+                <x-slot:table>
                 @foreach ($this->rows as $row)
                     <tr wire:key="kontak-{{ $row->id }}">
                         <td class="px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-200">
@@ -63,6 +64,7 @@
                         </td>
                     </tr>
                 @endforeach
+                </x-slot:table>
             </x-nawasara-ui::table>
         @endif
     </x-nawasara-ui::page.card>

@@ -1,40 +1,29 @@
 # nawasara/emergency
 
-Direktori nomor telepon darurat untuk framework superapp Nawasara. Nomor
-dikelompokkan dan disajikan ke aplikasi warga, lengkap dengan penanda versi
-supaya aplikasi dapat menyimpan salinannya untuk dipakai **tanpa jaringan**.
+Emergency phone number directory for the Nawasara superapp framework. Numbers are grouped and served to the citizen app, along with a version marker so the app can keep a copy for use without a network connection.
 
 ## Status v0.1.0
 
-| Fitur | Status |
+| Feature | Status |
 |---|---|
-| Tabel nomor darurat + panel pengelola | ✅ siap |
-| Pengelompokan (Darurat, Kesehatan, Layanan Publik, Bencana) | ✅ siap |
-| Endpoint warga `GET /emergency/contacts` — terbuka, tanpa akun | ✅ siap |
-| Penanda versi untuk cache luring | ✅ siap |
-| Nonaktifkan tanpa menghapus | ✅ siap |
-| Seeder nomor nasional (112, 110, 113, 118, 119, 117, 123) | ✅ siap |
-| Nomor lokal Ponorogo | ⏳ diisi staf lewat panel |
+| Emergency number table + admin panel | ready |
+| Grouping (Darurat, Kesehatan, Layanan Publik, Bencana) | ready |
+| Citizen endpoint `GET /emergency/contacts`, open, no account needed | ready |
+| Version marker for offline cache | ready |
+| Deactivate without deleting | ready |
+| National number seeder (112, 110, 113, 118, 119, 117, 123) | ready |
+| Ponorogo local numbers | not built yet, staff fill these in via the panel |
 
-## Kenapa layar ini harus bekerja tanpa jaringan
+## Why this screen has to work without a network
 
-Nomor darurat dibutuhkan justru saat keadaan buruk — kecelakaan, banjir,
-kebakaran — dan itulah saat sinyal paling mungkin hilang. Aplikasi karena itu
-menyimpan salinan daftarnya, dan hanya mengunduh ulang bila penandanya
-berubah.
+Emergency numbers are needed exactly when things go wrong: accidents, floods, fires, which is also when signal is most likely to drop. So the app keeps a copy of the list and only re-downloads it when the marker changes.
 
-Penanda itu (`meta.version`) dihitung dari **jumlah baris aktif DAN waktu ubah
-terbaru**, bukan salah satunya:
+That marker (`meta.version`) is computed from both the count of active rows and the most recent update time, not one of them alone:
 
-- Waktu saja melewatkan **penghapusan** — mencabut sebuah nomor tidak mengubah
-  `updated_at` baris mana pun yang tersisa, sehingga aplikasi akan terus
-  menampilkan nomor yang sudah tidak berlaku. Nomor darurat yang salah lebih
-  berbahaya daripada tidak ada nomor sama sekali.
-- Jumlah saja melewatkan **perubahan isi** — mengganti satu nomor tidak
-  mengubah jumlahnya.
+- Time alone misses deletions. Removing a number does not change the `updated_at` of any remaining row, so the app would keep showing a number that no longer applies. A wrong emergency number is more dangerous than no number at all.
+- Count alone misses content changes. Replacing one number does not change the count.
 
-Keduanya bersama menangkap tambah, ubah, dan hapus. Uji
-`tests/DirectoryTest.php` mengunci kasus penghapusan secara khusus.
+Together they catch adds, edits, and deletes. `tests/DirectoryTest.php` specifically locks down the deletion case.
 
 ## Setup
 
@@ -45,24 +34,19 @@ php artisan db:seed --class="Nawasara\Emergency\Database\Seeders\PermissionSeede
 php artisan db:seed --class="Nawasara\Emergency\Database\Seeders\ContactSeeder"
 ```
 
-Tambahkan juga di `resources/css/app.css` — tanpa ini seluruh kelas Tailwind
-di blade paket tidak ter-compile:
+Also add this to `resources/css/app.css`. Without it, none of the Tailwind classes in the package blades compile:
 
 ```css
 @source "../../vendor/nawasara/emergency";
 ```
 
-## Endpoint warga
+## Citizen endpoint
 
 ```
 GET /api/v1/emergency/contacts
 ```
 
-**Terbuka tanpa akun**, sengaja. Orang yang baru memasang aplikasi dan belum
-sempat mendaftar adalah justru orang yang mungkin membutuhkannya; menuntut
-login sebelum menampilkan nomor pemadam kebakaran adalah kegagalan rancangan.
-Isinya memang publik — nomor-nomor ini tercetak di brosur dan papan
-pengumuman.
+Open, no account required, on purpose. Someone who just installed the app and has not registered yet is exactly the person who might need it; requiring login before showing the fire department number would be a design failure. The content is public anyway: these numbers are printed on brochures and notice boards.
 
 ```jsonc
 {
@@ -84,55 +68,46 @@ pengumuman.
 }
 ```
 
-Kelompok diurutkan menurut **kemendesakan**, bukan abjad — "Bencana"
-mendahului "Darurat" secara alfabet, dan itu urutan yang keliru untuk layar
-yang dipindai orang dengan cepat. Kelompok di luar daftar bawaan tetap tampil,
-di posisi paling akhir; staf boleh menambah kelompok baru tanpa menunggu
-perubahan kode.
+Groups are ordered by urgency, not alphabetically. "Bencana" would come before "Darurat" alphabetically, and that is the wrong order for a screen people scan quickly. Groups outside the default list still show up, placed last; staff can add new groups without waiting for a code change.
 
 ## Model
 
-`EmergencyContact` — tabel `nawasara_emergency_contacts`
+`EmergencyContact`, table `nawasara_emergency_contacts`
 
-| Kolom | Catatan |
+| Column | Notes |
 |---|---|
-| `group` | Teks, bukan enum — daftar kelompok adalah keputusan tampilan yang boleh berubah tanpa migrasi |
-| `name` | Nama yang dibaca warga |
-| `number` | **String, bukan angka** — "112" dan "0352481113" kehilangan nol depannya sebagai integer |
-| `icon_name` | Nama ikon Lucide tanpa awalan, mis. `shield-alert` |
-| `primary` | Nomor utama kelompoknya, ditampilkan lebih menonjol |
-| `is_active` | Nonaktif tanpa menghapus — nomor yang dicabut tetap punya jejak |
-| `sort_order` | Urutan dalam kelompoknya |
+| `group` | Text, not an enum. The list of groups is a display decision that can change without a migration |
+| `name` | The name citizens read |
+| `number` | String, not a number. "112" and "0352481113" lose their leading zero as an integer |
+| `icon_name` | Lucide icon name without the prefix, e.g. `shield-alert` |
+| `primary` | The main number of its group, shown more prominently |
+| `is_active` | Deactivate without deleting; a withdrawn number keeps its trail |
+| `sort_order` | Order within its group |
 
 ## Permissions
 
-| Permission | Untuk |
+| Permission | For |
 |---|---|
-| `emergency.contact.view` | Melihat daftar di panel |
-| `emergency.contact.manage` | Menambah, mengubah, menonaktifkan |
+| `emergency.contact.view` | Viewing the list in the panel |
+| `emergency.contact.manage` | Adding, editing, deactivating |
 
-Sengaja dipisah: mengubah nomor darurat berarti mengubah ke mana warga
-menelepon saat keadaan buruk, dan itu tidak memberi kesempatan kedua.
+These are kept separate on purpose: changing an emergency number changes where citizens call when things go wrong, and that leaves no room for a second chance.
 
-## Catatan seeder
+## Seeder notes
 
-`ContactSeeder` hanya berisi **nomor nasional** yang berlaku di mana pun.
-Nomor lokal Ponorogo sengaja tidak ditebak — nomor darurat yang salah lebih
-berbahaya daripada nomor yang belum ada. Nomor lokal diisi staf lewat panel,
-dan panelnya ada justru supaya itu tidak menunggu rilis.
+`ContactSeeder` only contains national numbers that apply everywhere. Ponorogo local numbers are deliberately not guessed. A wrong emergency number is more dangerous than one that is not there yet. Local numbers are filled in by staff via the panel, and the panel exists precisely so that this does not have to wait for a release.
 
-Seeder aman dijalankan berulang: ia memakai `updateOrCreate` pada nomor +
-nama, sehingga tidak menimpa suntingan staf pada baris lain.
+The seeder is safe to run repeatedly: it uses `updateOrCreate` on number + name, so it does not overwrite staff edits on other rows.
 
 ## Roadmap
 
-- Nomor per kecamatan (puskesmas, polsek, posko) — menunggu master wilayah
-- Riwayat perubahan nomor (siapa mengubah apa, kapan)
-- Ekspor daftar untuk dicetak
+- Numbers per sub-district (puskesmas, polsek, posko), waiting on the regional master data
+- Change history for numbers (who changed what, when)
+- Export the list for printing
 
 ## Author
 
-Pringgo J. Saputro — Dinas Kominfo Kabupaten Ponorogo
+Pringgo J. Saputro, Dinas Kominfo Kabupaten Ponorogo
 
 ## License
 

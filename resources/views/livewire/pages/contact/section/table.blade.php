@@ -47,88 +47,93 @@
         <div data-filter-chips class="flex flex-wrap items-center gap-2"></div>
     </div>
 
-    <x-nawasara-ui::page.card>
-        @if (count($this->rows) === 0)
-            {{-- Dibedakan: "belum ada data" menuntut tindakan yang berbeda
-                 dari "saringan tidak menghasilkan apa-apa". Satu pesan untuk
-                 keduanya membuat staf mencari data yang sebenarnya ada. --}}
-            @if ($search !== '' || $groupFilter !== '' || $statusFilter !== '')
-                <x-nawasara-ui::empty-state
-                    icon="lucide-search-x"
-                    title="Tidak ada nomor yang cocok"
-                    description="Ubah kata kunci atau saringannya." />
-            @else
-                <x-nawasara-ui::empty-state
-                    icon="lucide-phone-off"
-                    title="Belum ada nomor darurat"
-                    description="Jalankan ContactSeeder untuk mengisi nomor nasional, lalu tambahkan nomor lokal Ponorogo." />
-            @endif
+    @if (count($this->rows) === 0)
+        {{-- Dibedakan: "belum ada data" menuntut tindakan yang berbeda
+             dari "saringan tidak menghasilkan apa-apa". Satu pesan untuk
+             keduanya membuat staf mencari data yang sebenarnya ada. --}}
+        @if ($search !== '' || $groupFilter !== '' || $statusFilter !== '')
+            <x-nawasara-ui::empty-state
+                icon="lucide-search-x"
+                title="Tidak ada nomor yang cocok"
+                description="Ubah kata kunci atau saringannya." />
         @else
-            <x-nawasara-ui::table :headers="['Kelompok', 'Nama', 'Nomor', 'Utama', 'Status', '']" stickyLast>
-                <x-slot:table>
-                @foreach ($this->rows as $row)
-                    <tr wire:key="kontak-{{ $row->id }}">
-                        <td class="px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-200">
-                            {{ $row->group }}
-                        </td>
-                        <td class="px-4 py-2.5">
-                            <span class="text-sm text-neutral-800 dark:text-neutral-100">{{ $row->name }}</span>
-                            @if ($row->description)
-                                <p class="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                                    {{ $row->description }}
-                                </p>
-                            @endif
-                        </td>
-                        <td class="px-4 py-2.5 font-mono text-sm text-neutral-800 dark:text-neutral-100">
-                            {{ $row->number }}
-                        </td>
-                        <td class="px-4 py-2.5">
-                            @if ($row->primary)
-                                <x-nawasara-ui::badge color="warning">Utama</x-nawasara-ui::badge>
-                            @endif
-                        </td>
-                        <td class="px-4 py-2.5">
-                            <x-nawasara-ui::badge :color="$row->is_active ? 'success' : 'neutral'">
-                                {{ $row->is_active ? 'Aktif' : 'Nonaktif' }}
-                            </x-nawasara-ui::badge>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                            {{-- Dropdown titik-tiga, pola yang sama dengan DNS
-                                 Records. Tombol berjejer memakan lebar kolom
-                                 dan tidak menyediakan tempat bagi aksi ketiga
-                                 seperti Hapus. --}}
-                            <x-nawasara-ui::dropdown-menu-action :id="$row->id" :items="[
-                                [
-                                    'type' => 'click',
-                                    'label' => 'Ubah',
-                                    'wire:click' => 'edit('.$row->id.')',
-                                    'modal' => 'kontak-form',
-                                    'icon' => 'lucide-pencil',
-                                    'permission' => 'emergency.contact.manage',
-                                ],
-                                [
-                                    'type' => 'click',
-                                    'label' => $row->is_active ? 'Nonaktifkan' : 'Aktifkan',
-                                    'wire:click' => 'toggle('.$row->id.')',
-                                    'icon' => $row->is_active ? 'lucide-eye-off' : 'lucide-eye',
-                                    'permission' => 'emergency.contact.manage',
-                                ],
-                                [
-                                    'type' => 'click',
-                                    'label' => 'Hapus',
-                                    'wire:click' => 'delete('.$row->id.')',
-                                    'icon' => 'lucide-trash-2',
-                                    'confirm' => 'Hapus nomor "'.$row->name.'" secara permanen? Untuk menonaktifkan sementara, pakai Nonaktifkan.',
-                                    'permission' => 'emergency.contact.manage',
-                                ],
-                            ]" />
-                        </td>
-                    </tr>
-                @endforeach
-                </x-slot:table>
-            </x-nawasara-ui::table>
+            <x-nawasara-ui::empty-state
+                icon="lucide-phone-off"
+                title="Belum ada nomor darurat"
+                description="Jalankan ContactSeeder untuk mengisi nomor nasional, lalu tambahkan nomor lokal Ponorogo." />
         @endif
-    </x-nawasara-ui::page.card>
+    @else
+        <x-nawasara-ui::table :headers="['Kelompok', 'Nama', 'Nomor', 'Utama', 'Status', '']" stickyLast>
+            <x-slot:table>
+            @foreach ($this->rows as $row)
+                <tr wire:key="kontak-{{ $row->id }}">
+                    <td class="px-6 py-4 text-sm text-neutral-700 dark:text-neutral-200">
+                        {{ $row->group }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-neutral-800 dark:text-neutral-100">{{ $row->name }}</span>
+                        @if ($row->description)
+                            <p class="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                                {{ $row->description }}
+                            </p>
+                        @endif
+                    </td>
+                    <td class="px-6 py-4 font-mono text-sm text-neutral-800 dark:text-neutral-100">
+                        {{ $row->number }}
+                    </td>
+                    <td class="px-6 py-4">
+                        @if ($row->primary)
+                            <x-nawasara-ui::badge color="warning">Utama</x-nawasara-ui::badge>
+                        @endif
+                    </td>
+                    <td class="px-6 py-4">
+                        <x-nawasara-ui::badge :color="$row->is_active ? 'success' : 'neutral'">
+                            {{ $row->is_active ? 'Aktif' : 'Nonaktif' }}
+                        </x-nawasara-ui::badge>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        {{-- Dropdown titik-tiga, pola yang sama dengan DNS
+                             Records. Tombol berjejer memakan lebar kolom
+                             dan tidak menyediakan tempat bagi aksi ketiga
+                             seperti Hapus. --}}
+                        <x-nawasara-ui::dropdown-menu-action :id="$row->id" :items="[
+                            [
+                                'type' => 'click',
+                                'label' => 'Ubah',
+                                'wire:click' => 'edit('.$row->id.')',
+                                'modal' => 'kontak-form',
+                                'icon' => 'lucide-pencil',
+                                'permission' => 'emergency.contact.manage',
+                            ],
+                            [
+                                'type' => 'click',
+                                'label' => $row->is_active ? 'Nonaktifkan' : 'Aktifkan',
+                                'wire:click' => 'toggle('.$row->id.')',
+                                'icon' => $row->is_active ? 'lucide-eye-off' : 'lucide-eye',
+                                'permission' => 'emergency.contact.manage',
+                            ],
+                            [
+                                'type' => 'click',
+                                'label' => 'Hapus',
+                                'wire:click' => 'delete('.$row->id.')',
+                                'icon' => 'lucide-trash-2',
+                                // ⚠️ JANGAN pakai kutip ganda literal di sini.
+                                // Nilai ini berada di dalam atribut Blade
+                                // atribut :items yang juga dibatasi kutip
+                                // ganda, jadi satu saja menutup atribut
+                                // itu dan sisa array tumpah ke halaman
+                                // sebagai teks mentah. Pakai kutip tunggal
+                                // tipografis, yang aman di dalam atribut.
+                                'confirm' => 'Hapus nomor ‘'.$row->name.'’ secara permanen? Untuk menonaktifkan sementara, pakai Nonaktifkan.',
+                                'permission' => 'emergency.contact.manage',
+                            ],
+                        ]" />
+                    </td>
+                </tr>
+            @endforeach
+            </x-slot:table>
+        </x-nawasara-ui::table>
+    @endif
 
     <x-nawasara-ui::modal id="kontak-form" :title="$editingId ? 'Ubah Nomor' : 'Tambah Nomor'">
         <div class="space-y-4">

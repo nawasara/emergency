@@ -3,8 +3,11 @@
 namespace Nawasara\Emergency\Livewire\Contact\Section;
 
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Nawasara\AuthPrimitives\Attributes\RequiresSudo;
+use Nawasara\AuthPrimitives\Traits\WithSudo;
 use Nawasara\Emergency\Models\EmergencyContact;
 
 /**
@@ -17,6 +20,8 @@ use Nawasara\Emergency\Models\EmergencyContact;
  */
 class Table extends Component
 {
+    use WithSudo;
+
     /**
      * Saringan toolbar — di URL supaya tautan hasil saringan dapat dibagikan
      * dan tetap bertahan setelah muat ulang.
@@ -30,6 +35,9 @@ class Table extends Component
     #[Url(except: '')]
     public string $statusFilter = '';
 
+    // Audit keamanan 15 Oktober 2026: hanya diisi server (edit), dikunci
+    // supaya payload wire tidak dapat mengalihkan simpan ke nomor lain.
+    #[Locked]
     public ?int $editingId = null;
 
     public string $group = '';
@@ -178,6 +186,9 @@ class Table extends Component
      * memasang konfirmasi — nomor darurat yang terhapus tanpa sengaja tidak
      * terlihat sampai ada yang membutuhkannya.
      */
+    // Audit keamanan 15 Oktober 2026 (S6): hapus permanen wajib sudo
+    // (AGENTS.md §6). Nonaktifkan lewat toggle() tetap tanpa sudo.
+    #[RequiresSudo(reason: 'menghapus nomor darurat')]
     public function delete(int $id): void
     {
         $this->authorize('emergency.contact.manage');
